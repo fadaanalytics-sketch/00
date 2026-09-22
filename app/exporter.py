@@ -1,15 +1,26 @@
 """Clip cutting and template compositing via FFmpeg (subprocess, no ffmpeg-python dep)."""
+import logging
 import os
 import shutil
 import subprocess
+import threading
+import time
+from typing import Optional
 
+from .config import CANCELLED_MESSAGE
 from .models import Template, Topic
+
+logger = logging.getLogger(__name__)
 
 HIGH_QUALITY_VIDEO_ARGS = ["-c:v", "libx264", "-crf", "18", "-preset", "slow", "-pix_fmt", "yuv420p"]
 HIGH_QUALITY_AUDIO_ARGS = ["-c:a", "aac", "-b:a", "192k"]
 
 
 class ExportError(Exception):
+    pass
+
+
+class CancelledError(ExportError):
     pass
 
 
@@ -20,10 +31,23 @@ def _ffmpeg_bin() -> str:
     return path
 
 
-def _run(cmd: list[str]):
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+def _run(cmd: list[str], cancel_event: Optional[threading.Event] = None):
+    logger.debug("Running ffmpeg: %s", " ".join(cmd))
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+    )
+    while proc.poll() is None:
+        if cancel_event is not None and cancel_event.is_set():
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+            raise CancelledError(CANCELLED_MESSAGE)
+        time.sleep(0.2)
+    output = proc.stdout.read() if proc.stdout else ""
     if proc.returncode != 0:
-        raise ExportError(f"فشل FFmpeg:\n{proc.stdout[-4000:]}")
+        raise ExportError(f"فشل FFmpeg:\n{output[-4000:]}")
 
 
 def _escape_drawtext(text: str) -> str:
@@ -39,25 +63,17 @@ def safe_filename(name: str) -> str:
     return keep.strip().strip(".") or "clip"
 
 
-def cut_clip(video_path: str, start: float, end: float, out_path: str):
-    """Cut [start, end] from video_path with fixed high quality, no template."""
-    ffmpeg = _ffmpeg_bin()
+def build_cut_cmd(ffmpeg: str, video_path: str, start: float, end: float, out_path: str) -> list[str]:
     duration = max(end - start, 0.1)
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-    cmd = [
+    return [
         ffmpeg, "-y", "-ss", str(start), "-i", video_path, "-t", str(duration),
         *HIGH_QUALITY_VIDEO_ARGS, *HIGH_QUALITY_AUDIO_ARGS, out_path,
     ]
-    _run(cmd)
 
 
-def export_with_template(video_path: str, start: float, end: float,
-                          template: Template, out_path: str):
-    """Cut [start, end] and composite it onto the template image with text overlays."""
-    ffmpeg = _ffmpeg_bin()
+def build_template_cmd(ffmpeg: str, video_path: str, start: float, end: float,
+                        template: Template, out_path: str) -> list[str]:
     duration = max(end - start, 0.1)
-    os.makedirs(os.path.dirname(out_path), exist_ok=True)
-
     filters = [
         f"[1:v]scale={template.canvas_w}:{template.canvas_h}[bg]",
         f"[0:v]scale={template.video_w}:{template.video_h}[fg]",
@@ -75,7 +91,9 @@ def export_with_template(video_path: str, start: float, end: float,
         last = stage
 
     filter_complex = ";".join(filters)
-    cmd = [
+    # -ss/-t MUST precede the video's own -i (not the template image's -i), otherwise
+    # ffmpeg attaches them to the wrong input and the clip duration comes out wrong.
+    return [
         ffmpeg, "-y",
         "-ss", str(start), "-t", str(duration), "-i", video_path,
         "-loop", "1", "-i", template.image_path,
@@ -84,22 +102,41 @@ def export_with_template(video_path: str, start: float, end: float,
         *HIGH_QUALITY_VIDEO_ARGS, *HIGH_QUALITY_AUDIO_ARGS,
         "-shortest", out_path,
     ]
-    _run(cmd)
+
+
+def cut_clip(video_path: str, start: float, end: float, out_path: str,
+             cancel_event: Optional[threading.Event] = None):
+    """Cut [start, end] from video_path with fixed high quality, no template."""
+    ffmpeg = _ffmpeg_bin()
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    _run(build_cut_cmd(ffmpeg, video_path, start, end, out_path), cancel_event)
+
+
+def export_with_template(video_path: str, start: float, end: float,
+                          template: Template, out_path: str,
+                          cancel_event: Optional[threading.Event] = None):
+    """Cut [start, end] and composite it onto the template image with text overlays."""
+    ffmpeg = _ffmpeg_bin()
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    _run(build_template_cmd(ffmpeg, video_path, start, end, template, out_path), cancel_event)
 
 
 def export_topics(video_path: str, topics: list[Topic], out_dir: str,
-                   template: Template = None, progress_cb=None):
+                   template: Template = None, progress_cb=None,
+                   cancel_event: Optional[threading.Event] = None):
     """Export every selected topic as its own file into out_dir."""
     os.makedirs(out_dir, exist_ok=True)
     selected = [t for t in topics if t.selected]
     results = []
     for i, topic in enumerate(selected):
+        if cancel_event is not None and cancel_event.is_set():
+            raise CancelledError(CANCELLED_MESSAGE)
         filename = f"{i + 1:02d}_{safe_filename(topic.name)}.mp4"
         out_path = os.path.join(out_dir, filename)
         if template:
-            export_with_template(video_path, topic.start, topic.end, template, out_path)
+            export_with_template(video_path, topic.start, topic.end, template, out_path, cancel_event)
         else:
-            cut_clip(video_path, topic.start, topic.end, out_path)
+            cut_clip(video_path, topic.start, topic.end, out_path, cancel_event)
         results.append(out_path)
         if progress_cb:
             progress_cb((i + 1) / len(selected))

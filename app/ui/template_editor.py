@@ -5,10 +5,10 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGraphicsView, QGraphicsScene,
     QGraphicsRectItem, QGraphicsTextItem, QPushButton, QLabel, QLineEdit,
     QSpinBox, QFormLayout, QWidget, QListWidget, QListWidgetItem,
-    QColorDialog, QFileDialog, QMessageBox, QGroupBox
+    QColorDialog, QFileDialog, QMessageBox, QGroupBox, QComboBox
 )
 
-from .. import db
+from .. import config, db
 from ..models import Template, TextBox
 
 HANDLE_SIZE = 10
@@ -84,6 +84,8 @@ class TemplateEditorDialog(QDialog):
         self.template = template
         self.text_items: list[DraggableTextItem] = []
         self.video_item: ResizableRectItem = None
+        self.bg_item = None
+        self._orig_pixmap: QPixmap = None
 
         self.scene = QGraphicsScene()
         self.view = QGraphicsView(self.scene)
@@ -96,6 +98,22 @@ class TemplateEditorDialog(QDialog):
 
         self.canvas_w_spin = QSpinBox(); self.canvas_w_spin.setRange(64, 8000)
         self.canvas_h_spin = QSpinBox(); self.canvas_h_spin.setRange(64, 8000)
+
+        canvas_group = QGroupBox("مقاس القماش (Canvas)")
+        canvas_layout = QVBoxLayout(canvas_group)
+        self.preset_combo = QComboBox()
+        self.preset_combo.addItem("مخصص", None)
+        for label, size in config.TEMPLATE_CANVAS_PRESETS.items():
+            self.preset_combo.addItem(label, size)
+        self.preset_combo.currentIndexChanged.connect(self._on_preset_selected)
+        canvas_form = QFormLayout()
+        canvas_form.addRow("العرض:", self.canvas_w_spin)
+        canvas_form.addRow("الارتفاع:", self.canvas_h_spin)
+        apply_canvas_btn = QPushButton("تطبيق مقاس القماش")
+        apply_canvas_btn.clicked.connect(self._apply_canvas_size)
+        canvas_layout.addWidget(self.preset_combo)
+        canvas_layout.addLayout(canvas_form)
+        canvas_layout.addWidget(apply_canvas_btn)
 
         video_group = QGroupBox("موضع الفيديو")
         vg_form = QFormLayout(video_group)
@@ -144,6 +162,7 @@ class TemplateEditorDialog(QDialog):
         side_l.addWidget(QLabel("اسم القالب:"))
         side_l.addWidget(self.name_edit)
         side_l.addWidget(load_img_btn)
+        side_l.addWidget(canvas_group)
         side_l.addWidget(video_group)
         side_l.addWidget(text_group)
         side_l.addStretch()
@@ -169,7 +188,8 @@ class TemplateEditorDialog(QDialog):
         self.image_path = path
         self.scene.clear()
         self.text_items = []
-        self.scene.addPixmap(pixmap)
+        self._orig_pixmap = pixmap
+        self.bg_item = self.scene.addPixmap(pixmap)
         self.scene.setSceneRect(0, 0, pixmap.width(), pixmap.height())
         self.canvas_w_spin.setValue(pixmap.width())
         self.canvas_h_spin.setValue(pixmap.height())
@@ -183,7 +203,10 @@ class TemplateEditorDialog(QDialog):
     def _load_template(self, t: Template):
         self.image_path = t.image_path
         pixmap = QPixmap(t.image_path)
-        self.scene.addPixmap(pixmap)
+        self._orig_pixmap = pixmap
+        self.bg_item = self.scene.addPixmap(
+            pixmap.scaled(t.canvas_w, t.canvas_h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+        )
         self.scene.setSceneRect(0, 0, t.canvas_w, t.canvas_h)
         self.canvas_w_spin.setValue(t.canvas_w)
         self.canvas_h_spin.setValue(t.canvas_h)
@@ -196,6 +219,25 @@ class TemplateEditorDialog(QDialog):
             self.scene.addItem(item)
             self.text_items.append(item)
             self.text_list.addItem(QListWidgetItem(tb.text or "(نص)"))
+
+    # ---- canvas ----
+
+    def _on_preset_selected(self, index):
+        size = self.preset_combo.currentData()
+        if size is None:
+            return
+        w, h = size
+        self.canvas_w_spin.setValue(w)
+        self.canvas_h_spin.setValue(h)
+
+    def _apply_canvas_size(self):
+        if self._orig_pixmap is None:
+            QMessageBox.warning(self, "تنبيه", "اختر صورة القالب أولاً")
+            return
+        w, h = self.canvas_w_spin.value(), self.canvas_h_spin.value()
+        self.scene.setSceneRect(0, 0, w, h)
+        scaled = self._orig_pixmap.scaled(w, h, Qt.IgnoreAspectRatio, Qt.SmoothTransformation)
+        self.bg_item.setPixmap(scaled)
 
     # ---- video rect ----
 

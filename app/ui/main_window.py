@@ -80,17 +80,36 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(w)
         self.project_info_label = QLabel("لا يوجد مشروع محدد")
         self.whisper_model_label = QLabel("")
+
+        self.language_combo = QComboBox()
+        for code, label in transcription.LANGUAGES.items():
+            self.language_combo.addItem(label, code)
+
         self.transcribe_btn = QPushButton("بدء التفريغ الصوتي")
         self.transcribe_btn.clicked.connect(self.start_transcription)
+        self.transcribe_cancel_btn = QPushButton("إلغاء")
+        self.transcribe_cancel_btn.setEnabled(False)
+        self.transcribe_cancel_btn.clicked.connect(lambda: self._cancel_worker())
         self.transcribe_progress = QProgressBar()
+        self.transcribe_progress.setRange(0, 100)
+
+        self.export_srt_btn = QPushButton("تصدير SRT")
+        self.export_srt_btn.clicked.connect(self._export_srt)
+
         self.transcript_view = QPlainTextEdit()
         self.transcript_view.setReadOnly(True)
 
         layout.addWidget(self.project_info_label)
         layout.addWidget(self.whisper_model_label)
+        lang_row = QHBoxLayout()
+        lang_row.addWidget(QLabel("لغة الفيديو:"))
+        lang_row.addWidget(self.language_combo)
+        layout.addLayout(lang_row)
         row = QHBoxLayout()
         row.addWidget(self.transcribe_btn)
+        row.addWidget(self.transcribe_cancel_btn)
         row.addWidget(self.transcribe_progress)
+        row.addWidget(self.export_srt_btn)
         layout.addLayout(row)
         layout.addWidget(QLabel("النص المفرغ:"))
         layout.addWidget(self.transcript_view, 1)
@@ -143,11 +162,18 @@ class MainWindow(QMainWindow):
         self.output_dir_label = QLabel(self._export_dir or "(لم يتم اختيار مجلد بعد)")
         layout.addWidget(self.output_dir_label)
 
+        export_row = QHBoxLayout()
         self.export_btn = QPushButton("تصدير المقاطع المحددة")
         self.export_btn.clicked.connect(self.start_export)
+        self.export_cancel_btn = QPushButton("إلغاء")
+        self.export_cancel_btn.setEnabled(False)
+        self.export_cancel_btn.clicked.connect(lambda: self._cancel_worker())
         self.export_progress = QProgressBar()
-        layout.addWidget(self.export_btn)
-        layout.addWidget(self.export_progress)
+        self.export_progress.setRange(0, 100)
+        export_row.addWidget(self.export_btn)
+        export_row.addWidget(self.export_cancel_btn)
+        export_row.addWidget(self.export_progress)
+        layout.addLayout(export_row)
 
         self.export_log = QPlainTextEdit()
         self.export_log.setReadOnly(True)
@@ -250,12 +276,21 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "تنبيه", "اختر مشروعًا يحتوي على فيديو أولاً")
             return
         self._set_busy(True, "جارٍ التفريغ الصوتي...")
-        self.transcribe_progress.setRange(0, 100)
+        self.transcribe_progress.setValue(0)
+        device = db.get_setting("whisper_device", "auto")
+        compute_type = db.get_setting("whisper_compute_type", "default")
+        language = self.language_combo.currentData()
         self._worker = WorkerThread(
             transcription.transcribe,
             self.current_project.video_path,
             self.current_project.whisper_model,
+            device=device,
+            compute_type=compute_type,
+            language=language,
+            report_progress=True,
+            cancellable=True,
         )
+        self._worker.progress.connect(lambda v: self.transcribe_progress.setValue(int(v * 100)))
         self._worker.finished_ok.connect(self._on_transcription_done)
         self._worker.failed.connect(self._on_worker_error)
         self._worker.start()
@@ -269,6 +304,18 @@ class MainWindow(QMainWindow):
         self._refresh_transcribe_tab()
         self.refresh_project_list()
         QMessageBox.information(self, "تم", "اكتمل التفريغ الصوتي")
+
+    def _export_srt(self):
+        if not self.current_segments:
+            QMessageBox.warning(self, "تنبيه", "لا يوجد نص مفرغ بعد")
+            return
+        default_name = f"{self.current_project.name}.srt" if self.current_project else "transcript.srt"
+        path, _ = QFileDialog.getSaveFileName(self, "حفظ ملف SRT", default_name, "SubRip (*.srt)")
+        if not path:
+            return
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(transcription.segments_to_srt(self.current_segments))
+        QMessageBox.information(self, "تم", "تم حفظ ملف SRT بنجاح")
 
     # ---------------- analysis ----------------
 
@@ -352,10 +399,13 @@ class MainWindow(QMainWindow):
         template = db.get_template(template_id) if template_id else None
 
         self._set_busy(True, "جارٍ التصدير...")
+        self.export_progress.setValue(0)
         self.export_log.clear()
         self._worker = WorkerThread(
-            exporter.export_topics, self.current_project.video_path, selected, out_dir, template
+            exporter.export_topics, self.current_project.video_path, selected, out_dir, template,
+            report_progress=True, cancellable=True,
         )
+        self._worker.progress.connect(lambda v: self.export_progress.setValue(int(v * 100)))
         self._worker.finished_ok.connect(self._on_export_done)
         self._worker.failed.connect(self._on_worker_error)
         self._worker.start()
@@ -393,12 +443,22 @@ class MainWindow(QMainWindow):
     def _set_busy(self, busy: bool, message: str = ""):
         for btn in (self.transcribe_btn, self.analyze_btn, self.export_btn):
             btn.setEnabled(not busy)
+        for btn in (self.transcribe_cancel_btn, self.export_cancel_btn):
+            btn.setEnabled(busy)
         if message:
             self.statusBar().showMessage(message)
         else:
             self.statusBar().clearMessage()
 
+    def _cancel_worker(self):
+        if self._worker is not None:
+            self._worker.cancel()
+            self.statusBar().showMessage("جارٍ الإلغاء...")
+
     def _on_worker_error(self, msg: str):
         self._set_busy(False)
         self.analysis_progress.setVisible(False)
+        if msg == config.CANCELLED_MESSAGE:
+            self.statusBar().showMessage("تم إلغاء العملية")
+            return
         QMessageBox.critical(self, "خطأ", msg)

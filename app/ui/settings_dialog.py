@@ -35,6 +35,14 @@ class SettingsDialog(QDialog):
             db.get_setting("whisper_model", config.DEFAULT_WHISPER_MODEL)
         )
 
+        self.device_combo = QComboBox()
+        self.device_combo.addItems(config.WHISPER_DEVICES)
+        self.device_combo.setCurrentText(db.get_setting("whisper_device", "auto"))
+
+        self.compute_type_combo = QComboBox()
+        self.compute_type_combo.addItems(config.WHISPER_COMPUTE_TYPES)
+        self.compute_type_combo.setCurrentText(db.get_setting("whisper_compute_type", "default"))
+
         self.output_dir_edit = QLineEdit(db.get_setting("output_dir", ""))
         browse_btn = QPushButton("استعراض...")
         browse_btn.clicked.connect(self._browse_output_dir)
@@ -51,6 +59,8 @@ class SettingsDialog(QDialog):
         test_row.addWidget(self.test_status)
         form.addRow("", test_row)
         form.addRow("نموذج Whisper الافتراضي:", self.whisper_combo)
+        form.addRow("جهاز المعالجة (Whisper):", self.device_combo)
+        form.addRow("نوع الحساب (Whisper):", self.compute_type_combo)
         form.addRow("مجلد الإخراج:", out_row)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
@@ -89,5 +99,7 @@ class SettingsDialog(QDialog):
         db.set_setting("api_key", self.api_key_edit.text())
         db.set_setting("ai_model", self.model_name_edit.text())
         db.set_setting("whisper_model", self.whisper_combo.currentText())
+        db.set_setting("whisper_device", self.device_combo.currentText())
+        db.set_setting("whisper_compute_type", self.compute_type_combo.currentText())
         db.set_setting("output_dir", self.output_dir_edit.text())
         self.accept()

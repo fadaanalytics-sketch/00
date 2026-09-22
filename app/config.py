@@ -19,11 +19,24 @@ DB_PATH = os.path.join(DATA_DIR, "app.db")
 WHISPER_MODELS = ["tiny", "base", "small", "medium", "large-v3"]
 DEFAULT_WHISPER_MODEL = "small"
 
+WHISPER_DEVICES = ["auto", "cpu", "cuda"]
+WHISPER_COMPUTE_TYPES = ["default", "int8", "int8_float16", "float16", "float32"]
+
 AI_PROVIDERS = ["gemini", "openrouter"]
 
 ANALYSIS_MODES = {
     "social_clips": "مقاطع قصيرة للسوشيال ميديا",
     "lecture_sections": "تقسيم المحاضرات الطويلة",
+}
+
+CANCELLED_MESSAGE = "تم إلغاء العملية بواسطة المستخدم"
+
+# name -> (width, height)
+TEMPLATE_CANVAS_PRESETS = {
+    "9:16 (1080x1920) - Reels/Shorts/TikTok": (1080, 1920),
+    "1:1 (1080x1080) - منشور مربع": (1080, 1080),
+    "16:9 (1920x1080) - يوتيوب": (1920, 1080),
+    "4:5 (1080x1350) - انستغرام": (1080, 1350),
 }
 
 

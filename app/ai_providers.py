@@ -1,5 +1,10 @@
 """REST clients for Gemini Studio and OpenRouter — plain requests, no heavy SDKs."""
+import logging
+import time
+
 import requests
+
+logger = logging.getLogger(__name__)
 
 GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 OPENROUTER_BASE = "https://openrouter.ai/api/v1"
@@ -8,10 +13,34 @@ DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
 DEFAULT_OPENROUTER_MODEL = "openai/gpt-4o-mini"
 
 TIMEOUT = 120
+MAX_ATTEMPTS = 4
+BACKOFF_BASE_SECONDS = 1.5
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 
 
 class AIProviderError(Exception):
     pass
+
+
+def _post_with_retry(url: str, **kwargs) -> requests.Response:
+    """POST with exponential backoff on network errors, 429, and 5xx responses."""
+    last_error = None
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        try:
+            resp = requests.post(url, timeout=TIMEOUT, **kwargs)
+        except (requests.ConnectionError, requests.Timeout) as e:
+            last_error = e
+            logger.warning("Network error (attempt %d/%d): %s", attempt, MAX_ATTEMPTS, e)
+        else:
+            if resp.status_code not in RETRYABLE_STATUS_CODES:
+                return resp
+            last_error = AIProviderError(f"HTTP {resp.status_code}: {resp.text[:300]}")
+            logger.warning(
+                "Retryable HTTP %s (attempt %d/%d)", resp.status_code, attempt, MAX_ATTEMPTS
+            )
+        if attempt < MAX_ATTEMPTS:
+            time.sleep(BACKOFF_BASE_SECONDS ** attempt)
+    raise AIProviderError(f"فشل الاتصال بعد {MAX_ATTEMPTS} محاولات: {last_error}")
 
 
 class BaseProvider:
@@ -33,11 +62,10 @@ class GeminiProvider(BaseProvider):
 
     def generate(self, prompt: str) -> str:
         url = f"{GEMINI_BASE}/models/{self.model}:generateContent"
-        resp = requests.post(
+        resp = _post_with_retry(
             url,
             params={"key": self.api_key},
             json={"contents": [{"parts": [{"text": prompt}]}]},
-            timeout=TIMEOUT,
         )
         if resp.status_code != 200:
             raise AIProviderError(f"Gemini API error {resp.status_code}: {resp.text[:300]}")
@@ -54,14 +82,13 @@ class OpenRouterProvider(BaseProvider):
         self.model = model or DEFAULT_OPENROUTER_MODEL
 
     def generate(self, prompt: str) -> str:
-        resp = requests.post(
+        resp = _post_with_retry(
             f"{OPENROUTER_BASE}/chat/completions",
             headers={"Authorization": f"Bearer {self.api_key}"},
             json={
                 "model": self.model,
                 "messages": [{"role": "user", "content": prompt}],
             },
-            timeout=TIMEOUT,
         )
         if resp.status_code != 200:
             raise AIProviderError(f"OpenRouter API error {resp.status_code}: {resp.text[:300]}")
