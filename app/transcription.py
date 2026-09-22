@@ -6,6 +6,11 @@ from typing import Callable, Optional
 from .config import CANCELLED_MESSAGE
 from .models import Segment
 
+# faster-whisper downloads the model from Hugging Face on first use (hundreds of MB).
+# With no network, or a blocked/slow proxy, that download can hang indefinitely with
+# no feedback at all - which looks exactly like the app being frozen. Bound it.
+MODEL_LOAD_TIMEOUT_SECONDS = 300
+
 # A practical subset; faster-whisper/Whisper supports many more ISO-639-1 codes.
 LANGUAGES = {
     "": "تلقائي (اكتشاف تلقائي)",
@@ -30,6 +35,49 @@ class CancelledError(TranscriptionError):
     pass
 
 
+def _load_model(model_size: str, device: str, compute_type: str, result: dict):
+    from faster_whisper import WhisperModel
+    try:
+        # Fast path: model already cached locally from a previous run, no network at all.
+        result["model"] = WhisperModel(
+            model_size, device=device, compute_type=compute_type, local_files_only=True
+        )
+    except Exception:
+        try:
+            result["model"] = WhisperModel(model_size, device=device, compute_type=compute_type)
+        except Exception as e:  # noqa: BLE001 - reported back to the caller thread
+            result["error"] = e
+
+
+def load_model(
+    model_size: str = "small",
+    device: str = "auto",
+    compute_type: str = "default",
+    status_cb: Optional[Callable[[str], None]] = None,
+):
+    """Load (or download, on first use) a Whisper model with a bounded timeout.
+
+    Runs in a daemon thread so a hung download never blocks the app indefinitely -
+    it just fails with a clear, actionable error after MODEL_LOAD_TIMEOUT_SECONDS.
+    """
+    if status_cb:
+        status_cb("جارٍ تحميل نموذج Whisper (قد يستغرق عدة دقائق في أول استخدام)...")
+    result: dict = {}
+    thread = threading.Thread(target=_load_model, args=(model_size, device, compute_type, result), daemon=True)
+    thread.start()
+    thread.join(timeout=MODEL_LOAD_TIMEOUT_SECONDS)
+    if thread.is_alive():
+        raise TranscriptionError(
+            f"تعذر تحميل نموذج Whisper خلال {MODEL_LOAD_TIMEOUT_SECONDS} ثانية. "
+            "على الأرجح لا يوجد اتصال بالإنترنت (أو محجوب عبر بروكسي) لتنزيل النموذج "
+            "لأول مرة — بعد نجاح التنزيل مرة واحدة سيعمل التطبيق بدون إنترنت لاحقًا. "
+            "تحقق من اتصالك بالشبكة وحاول مرة أخرى."
+        )
+    if "error" in result:
+        raise TranscriptionError(f"فشل تحميل نموذج Whisper: {result['error']}") from result["error"]
+    return result["model"]
+
+
 def transcribe(
     video_path: str,
     model_size: str = "small",
@@ -38,13 +86,16 @@ def transcribe(
     language: Optional[str] = None,
     progress_cb: Optional[Callable[[float], None]] = None,
     cancel_event: Optional[threading.Event] = None,
+    status_cb: Optional[Callable[[str], None]] = None,
 ) -> list[Segment]:
     try:
-        from faster_whisper import WhisperModel
+        import faster_whisper  # noqa: F401 - import-availability check only
     except ImportError as e:
         raise TranscriptionError("مكتبة faster-whisper غير مثبتة") from e
 
-    model = WhisperModel(model_size, device=device, compute_type=compute_type)
+    model = load_model(model_size, device, compute_type, status_cb)
+    if status_cb:
+        status_cb("جارٍ التفريغ الصوتي...")
     segments_iter, info = model.transcribe(
         video_path, beam_size=5, vad_filter=True, language=language or None
     )

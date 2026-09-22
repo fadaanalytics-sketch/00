@@ -11,8 +11,10 @@ class WorkerThread(QThread):
     finished_ok = Signal(object)
     failed = Signal(str)
     progress = Signal(float)
+    status = Signal(str)
 
-    def __init__(self, fn, *args, report_progress=False, cancellable=False, **kwargs):
+    def __init__(self, fn, *args, report_progress=False, cancellable=False,
+                 report_status=False, **kwargs):
         super().__init__()
         self.fn = fn
         self.args = args
@@ -20,6 +22,8 @@ class WorkerThread(QThread):
         self.cancel_event = threading.Event() if cancellable else None
         if report_progress:
             self.kwargs["progress_cb"] = self.progress.emit
+        if report_status:
+            self.kwargs["status_cb"] = self.status.emit
         if cancellable:
             self.kwargs["cancel_event"] = self.cancel_event
 

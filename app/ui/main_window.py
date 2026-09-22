@@ -288,9 +288,11 @@ class MainWindow(QMainWindow):
             compute_type=compute_type,
             language=language,
             report_progress=True,
+            report_status=True,
             cancellable=True,
         )
         self._worker.progress.connect(lambda v: self.transcribe_progress.setValue(int(v * 100)))
+        self._worker.status.connect(lambda msg: self.statusBar().showMessage(msg))
         self._worker.finished_ok.connect(self._on_transcription_done)
         self._worker.failed.connect(self._on_worker_error)
         self._worker.start()
