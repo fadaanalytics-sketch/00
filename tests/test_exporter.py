@@ -89,6 +89,44 @@ def test_run_drains_output_instead_of_deadlocking_on_a_full_pipe():
         raise result["error"]
 
 
+def test_run_tolerates_non_utf8_bytes_in_ffmpeg_output():
+    """Regression test: on Windows, Python's text=True defaults to the system's
+    ANSI codepage (e.g. cp1252) unless an encoding is given explicitly. ffmpeg's
+    console output isn't guaranteed to be valid in that codepage (or even valid
+    UTF-8), so decoding it crashed the draining thread with UnicodeDecodeError.
+    That crash is silent from _run()'s point of view (it happens on a
+    background thread) but stops draining right there - so on a real
+    (non-trivial-length) ffmpeg run, any output produced *after* the bad bytes
+    would refill the pipe with nobody left to drain it, reintroducing the
+    exact deadlock this module exists to avoid. Write invalid bytes followed
+    by enough additional output to overflow the OS pipe buffer, and require
+    that all of it is still drained (proving draining survived past the bad
+    bytes, not just that _run() itself didn't crash).
+    """
+    invalid_bytes_then_lots_more_cmd = [
+        sys.executable, "-c",
+        "import sys\n"
+        "sys.stdout.buffer.write(bytes([0x81, 0x8d, 0xff]))\n"
+        "sys.stdout.buffer.flush()\n"
+        "for _ in range(3000):\n"
+        "    sys.stdout.write('x' * 200 + chr(10))\n",
+    ]
+    result = {}
+
+    def target():
+        try:
+            _run(invalid_bytes_then_lots_more_cmd)
+        except Exception as e:  # noqa: BLE001 - re-raised on the test thread below
+            result["error"] = e
+
+    t = threading.Thread(target=target, daemon=True)
+    t.start()
+    t.join(timeout=10)
+    assert not t.is_alive(), "draining stopped after the bad bytes and _run() deadlocked"
+    if "error" in result:
+        raise result["error"]
+
+
 @pytest.mark.skipif(not FFMPEG_AVAILABLE, reason="ffmpeg not installed")
 def test_cut_clip_produces_correct_duration(tmp_path):
     video = tmp_path / "test.mp4"

@@ -59,7 +59,10 @@ def _extract_audio(video_path: str, out_path: str):
         ffmpeg, "-y", "-i", video_path, "-vn",
         "-ac", "1", "-ar", "16000", "-c:a", "aac", "-b:a", "64k", out_path,
     ]
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    proc = subprocess.run(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, encoding="utf-8", errors="replace",
+    )
     if proc.returncode != 0:
         raise TranscriptionError(f"فشل استخراج الصوت عبر FFmpeg:\n{proc.stdout[-2000:]}")
 

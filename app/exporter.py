@@ -49,13 +49,22 @@ def _run(cmd: list[str], cancel_event: Optional[threading.Event] = None):
     """
     logger.debug("Running ffmpeg: %s", " ".join(cmd))
     proc = subprocess.Popen(
-        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        text=True, encoding="utf-8", errors="replace",
     )
     output_chunks: list[str] = []
 
     def _drain():
-        for line in proc.stdout:
-            output_chunks.append(line)
+        # An uncaught exception here would silently kill this thread while the
+        # main loop below keeps polling - draining stops but the process
+        # doesn't, silently reintroducing the exact pipe deadlock this exists
+        # to prevent. errors="replace" above should make decoding infallible,
+        # but never let *any* hiccup here go unread again.
+        try:
+            for line in proc.stdout:
+                output_chunks.append(line)
+        except Exception:  # noqa: BLE001 - see comment above
+            logger.exception("Error draining ffmpeg output")
 
     reader = threading.Thread(target=_drain, daemon=True)
     reader.start()
