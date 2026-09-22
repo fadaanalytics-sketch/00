@@ -1,9 +1,11 @@
 import shutil
 import subprocess
+import sys
+import threading
 
 import pytest
 
-from app.exporter import build_cut_cmd, build_template_cmd, cut_clip, export_with_template
+from app.exporter import _run, build_cut_cmd, build_template_cmd, cut_clip, export_with_template
 from app.models import Template, TextBox
 
 FFMPEG_AVAILABLE = shutil.which("ffmpeg") is not None
@@ -54,6 +56,37 @@ def test_build_template_cmd_escapes_drawtext_special_chars():
     cmd = build_template_cmd("ffmpeg", "video.mp4", 0, 1, template, "out.mp4")
     filter_complex = cmd[cmd.index("-filter_complex") + 1]
     assert "100\\%\\: قيمة" in filter_complex
+
+
+def test_run_drains_output_instead_of_deadlocking_on_a_full_pipe():
+    """Regression test for a real deadlock: ffmpeg writes a steady stream of
+    progress output: on a real (non-trivial-length) clip this exceeds the OS
+    pipe buffer (~64KB). If nothing reads the pipe while the process runs,
+    the child blocks on write() forever and _run() never returns, leaving a
+    partially-written, unplayable output file behind. Tiny test clips never
+    produce enough output to hit this, so this test forces >64KB of output
+    directly instead of depending on ffmpeg/clip length.
+    """
+    big_output_cmd = [
+        sys.executable, "-c",
+        "import sys\nfor _ in range(3000):\n    sys.stdout.write('x' * 200 + chr(10))",
+    ]
+    result = {}
+
+    def target():
+        try:
+            _run(big_output_cmd)
+        except Exception as e:  # noqa: BLE001 - re-raised on the test thread below
+            result["error"] = e
+
+    # A daemon thread: if _run() really deadlocks, this thread is abandoned
+    # rather than hanging the whole test process waiting for it to finish.
+    t = threading.Thread(target=target, daemon=True)
+    t.start()
+    t.join(timeout=10)
+    assert not t.is_alive(), "_run() deadlocked on a full stdout pipe (regression!)"
+    if "error" in result:
+        raise result["error"]
 
 
 @pytest.mark.skipif(not FFMPEG_AVAILABLE, reason="ffmpeg not installed")

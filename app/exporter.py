@@ -36,10 +36,30 @@ def _ffmpeg_bin() -> str:
 
 
 def _run(cmd: list[str], cancel_event: Optional[threading.Event] = None):
+    """Run ffmpeg, continuously draining its output.
+
+    ffmpeg writes a steady stream of progress/encoding stats to stderr. If
+    nothing reads stdout/stderr while the process runs, the OS pipe buffer
+    (~64KB) fills up and ffmpeg blocks on write() forever - a classic
+    subprocess deadlock. It only shows up once a clip is long enough to
+    produce more than ~64KB of log output (tiny test clips never hit it),
+    at which point the process hangs mid-encode and leaves behind a
+    partially-written, unplayable output file. A background thread draining
+    the pipe as it's produced avoids this entirely.
+    """
     logger.debug("Running ffmpeg: %s", " ".join(cmd))
     proc = subprocess.Popen(
         cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
     )
+    output_chunks: list[str] = []
+
+    def _drain():
+        for line in proc.stdout:
+            output_chunks.append(line)
+
+    reader = threading.Thread(target=_drain, daemon=True)
+    reader.start()
+
     while proc.poll() is None:
         if cancel_event is not None and cancel_event.is_set():
             proc.terminate()
@@ -47,9 +67,12 @@ def _run(cmd: list[str], cancel_event: Optional[threading.Event] = None):
                 proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 proc.kill()
+            reader.join(timeout=2)
             raise CancelledError(CANCELLED_MESSAGE)
         time.sleep(0.2)
-    output = proc.stdout.read() if proc.stdout else ""
+
+    reader.join(timeout=5)
+    output = "".join(output_chunks)
     if proc.returncode != 0:
         raise ExportError(f"فشل FFmpeg:\n{output[-4000:]}")
 
