@@ -1,3 +1,5 @@
+import functools
+import logging
 import os
 import subprocess
 import sys
@@ -18,6 +20,27 @@ from .new_project_dialog import NewProjectDialog
 from .settings_dialog import SettingsDialog
 from .template_editor import TemplatesManagerDialog
 from .workers import WorkerThread
+
+logger = logging.getLogger(__name__)
+
+
+def _guarded(fn):
+    """Last-resort safety net for UI slots.
+
+    Qt swallows exceptions raised inside a slot instead of crashing - it logs
+    them via sys.excepthook and otherwise does nothing, which is invisible in
+    a windowed build with no console. Catch here so the user always sees
+    *something* instead of a button that silently does nothing.
+    """
+    @functools.wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        try:
+            return fn(self, *args, **kwargs)
+        except Exception as e:  # noqa: BLE001 - intentionally broad, see docstring
+            logger.exception("Unhandled error in %s", fn.__name__)
+            self._set_busy(False)
+            msgbox.error(self, "خطأ", f"حدث خطأ غير متوقع:\n{e}")
+    return wrapper
 
 
 class MainWindow(QMainWindow):
@@ -250,6 +273,7 @@ class MainWindow(QMainWindow):
         for t in db.list_templates():
             self.template_combo.addItem(t.name, t.id)
 
+    @_guarded
     def on_project_selected(self, row):
         if row < 0:
             self.current_project = None
@@ -273,6 +297,7 @@ class MainWindow(QMainWindow):
         self.whisper_model_label.setText(f"نموذج Whisper: {p.whisper_model}")
         self.transcript_view.setPlainText(transcription.transcript_as_text(self.current_segments))
 
+    @_guarded
     def on_new_project(self):
         dlg = NewProjectDialog(self)
         if not dlg.exec():
@@ -319,6 +344,7 @@ class MainWindow(QMainWindow):
 
     # ---------------- transcription ----------------
 
+    @_guarded
     def start_transcription(self):
         if not self.current_project or not self.current_project.video_path:
             msgbox.warn(self, "تنبيه", "اختر مشروعًا يحتوي على فيديو أولاً")
@@ -361,6 +387,7 @@ class MainWindow(QMainWindow):
         self._worker.failed.connect(self._on_worker_error)
         self._worker.start()
 
+    @_guarded
     def _on_transcription_done(self, segments):
         self.current_segments = segments
         self.current_project.transcript_json = transcription.segments_to_json(segments)
@@ -385,6 +412,7 @@ class MainWindow(QMainWindow):
 
     # ---------------- analysis ----------------
 
+    @_guarded
     def start_analysis(self):
         if not self.current_segments:
             msgbox.warn(self, "تنبيه", "قم بالتفريغ الصوتي أولاً")
@@ -407,6 +435,7 @@ class MainWindow(QMainWindow):
         self._worker.failed.connect(self._on_worker_error)
         self._worker.start()
 
+    @_guarded
     def _on_analysis_done(self, topics):
         self.current_topics = topics
         db.replace_topics(self.current_project.id, topics)
@@ -451,8 +480,10 @@ class MainWindow(QMainWindow):
             self._export_dir = d
             self.output_dir_label.setText(d)
 
+    @_guarded
     def start_export(self):
         if not self.current_project:
+            msgbox.warn(self, "تنبيه", "اختر مشروعًا أولاً")
             return
         selected = [t for t in self.current_topics if t.selected]
         if not selected:
@@ -476,6 +507,7 @@ class MainWindow(QMainWindow):
         self._worker.failed.connect(self._on_worker_error)
         self._worker.start()
 
+    @_guarded
     def _on_export_done(self, out_paths):
         self._set_busy(False)
         self.current_project.status = "exported"
