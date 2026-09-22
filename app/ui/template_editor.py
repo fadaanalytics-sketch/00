@@ -5,11 +5,12 @@ from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGraphicsView, QGraphicsScene,
     QGraphicsRectItem, QGraphicsTextItem, QPushButton, QLabel, QLineEdit,
     QSpinBox, QFormLayout, QWidget, QListWidget, QListWidgetItem,
-    QColorDialog, QFileDialog, QMessageBox, QGroupBox, QComboBox
+    QColorDialog, QFileDialog, QGroupBox, QComboBox
 )
 
 from .. import config, db
 from ..models import Template, TextBox
+from . import msgbox
 
 HANDLE_SIZE = 10
 
@@ -93,7 +94,8 @@ class TemplateEditorDialog(QDialog):
 
         # --- side panel ---
         self.name_edit = QLineEdit(template.name if template else "قالب جديد")
-        load_img_btn = QPushButton("اختيار صورة القالب")
+        load_img_btn = QPushButton("🖼  اختيار صورة القالب")
+        load_img_btn.setProperty("flat", "true")
         load_img_btn.clicked.connect(self._load_image)
 
         self.canvas_w_spin = QSpinBox(); self.canvas_w_spin.setRange(64, 8000)
@@ -110,6 +112,7 @@ class TemplateEditorDialog(QDialog):
         canvas_form.addRow("العرض:", self.canvas_w_spin)
         canvas_form.addRow("الارتفاع:", self.canvas_h_spin)
         apply_canvas_btn = QPushButton("تطبيق مقاس القماش")
+        apply_canvas_btn.setProperty("flat", "true")
         apply_canvas_btn.clicked.connect(self._apply_canvas_size)
         canvas_layout.addWidget(self.preset_combo)
         canvas_layout.addLayout(canvas_form)
@@ -122,6 +125,7 @@ class TemplateEditorDialog(QDialog):
         self.vw = QSpinBox(); self.vw.setRange(10, 8000)
         self.vh = QSpinBox(); self.vh.setRange(10, 8000)
         apply_video_btn = QPushButton("تطبيق")
+        apply_video_btn.setProperty("flat", "true")
         apply_video_btn.clicked.connect(self._apply_video_rect_from_spins)
         vg_form.addRow("X:", self.vx)
         vg_form.addRow("Y:", self.vy)
@@ -133,45 +137,54 @@ class TemplateEditorDialog(QDialog):
         tg_layout = QVBoxLayout(text_group)
         self.text_list = QListWidget()
         self.text_list.currentRowChanged.connect(self._on_text_selected)
-        add_text_btn = QPushButton("+ إضافة نص")
+        add_text_btn = QPushButton("＋ إضافة نص")
+        add_text_btn.setProperty("flat", "true")
         add_text_btn.clicked.connect(self._add_text)
-        remove_text_btn = QPushButton("حذف النص المحدد")
+        remove_text_btn = QPushButton("حذف النص")
+        remove_text_btn.setProperty("danger", "true")
         remove_text_btn.clicked.connect(self._remove_text)
 
         self.text_content_edit = QLineEdit()
         self.text_content_edit.textChanged.connect(self._update_selected_text_content)
         self.text_size_spin = QSpinBox(); self.text_size_spin.setRange(6, 300)
         self.text_size_spin.valueChanged.connect(self._update_selected_text_font)
-        color_btn = QPushButton("اختيار اللون")
+        color_btn = QPushButton("🎨  اختيار اللون")
+        color_btn.setProperty("flat", "true")
         color_btn.clicked.connect(self._pick_text_color)
 
+        tg_layout.setSpacing(8)
         tg_layout.addWidget(self.text_list)
-        tg_layout.addWidget(add_text_btn)
-        tg_layout.addWidget(remove_text_btn)
+        text_btn_row = QHBoxLayout()
+        text_btn_row.addWidget(add_text_btn)
+        text_btn_row.addWidget(remove_text_btn)
+        tg_layout.addLayout(text_btn_row)
         tg_layout.addWidget(QLabel("النص:"))
         tg_layout.addWidget(self.text_content_edit)
         tg_layout.addWidget(QLabel("حجم الخط:"))
         tg_layout.addWidget(self.text_size_spin)
         tg_layout.addWidget(color_btn)
 
-        save_btn = QPushButton("حفظ القالب")
-        save_btn.clicked.connect(self._save)
+        save_btn = QPushButton("💾  حفظ القالب")
+        save_btn.setMinimumHeight(36)
 
         side = QWidget()
         side_l = QVBoxLayout(side)
+        side_l.setSpacing(12)
         side_l.addWidget(QLabel("اسم القالب:"))
         side_l.addWidget(self.name_edit)
         side_l.addWidget(load_img_btn)
         side_l.addWidget(canvas_group)
         side_l.addWidget(video_group)
-        side_l.addWidget(text_group)
-        side_l.addStretch()
+        side_l.addWidget(text_group, 1)
         side_l.addWidget(save_btn)
-        side.setFixedWidth(280)
+        side.setFixedWidth(300)
 
         root = QHBoxLayout(self)
+        root.setContentsMargins(16, 16, 16, 16)
+        root.setSpacing(16)
         root.addWidget(self.view, 1)
         root.addWidget(side)
+        save_btn.clicked.connect(self._save)
 
         if template:
             self._load_template(template)
@@ -232,7 +245,7 @@ class TemplateEditorDialog(QDialog):
 
     def _apply_canvas_size(self):
         if self._orig_pixmap is None:
-            QMessageBox.warning(self, "تنبيه", "اختر صورة القالب أولاً")
+            msgbox.warn(self, "تنبيه", "اختر صورة القالب أولاً")
             return
         w, h = self.canvas_w_spin.value(), self.canvas_h_spin.value()
         self.scene.setSceneRect(0, 0, w, h)
@@ -319,7 +332,7 @@ class TemplateEditorDialog(QDialog):
 
     def _save(self):
         if not getattr(self, "image_path", None):
-            QMessageBox.warning(self, "تنبيه", "اختر صورة القالب أولاً")
+            msgbox.warn(self, "تنبيه", "اختر صورة القالب أولاً")
             return
         for item in self.text_items:
             item.sync_to_model()
@@ -352,19 +365,24 @@ class TemplatesManagerDialog(QDialog):
         self.list_widget = QListWidget()
         self._reload()
 
-        new_btn = QPushButton("قالب جديد")
+        new_btn = QPushButton("＋ قالب جديد")
         new_btn.clicked.connect(self._new_template)
         edit_btn = QPushButton("تعديل")
+        edit_btn.setProperty("flat", "true")
         edit_btn.clicked.connect(self._edit_template)
         delete_btn = QPushButton("حذف")
+        delete_btn.setProperty("danger", "true")
         delete_btn.clicked.connect(self._delete_template)
 
         btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
         btn_row.addWidget(new_btn)
         btn_row.addWidget(edit_btn)
         btn_row.addWidget(delete_btn)
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(12)
         layout.addWidget(self.list_widget)
         layout.addLayout(btn_row)
 
@@ -399,6 +417,6 @@ class TemplatesManagerDialog(QDialog):
         t = self._selected_template()
         if not t:
             return
-        if QMessageBox.question(self, "تأكيد", f"حذف القالب '{t.name}'؟") == QMessageBox.Yes:
+        if msgbox.confirm(self, "تأكيد", f"حذف القالب '{t.name}'؟"):
             db.delete_template(t.id)
             self._reload()

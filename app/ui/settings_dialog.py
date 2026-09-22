@@ -12,7 +12,7 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("الإعدادات")
-        self.setMinimumWidth(420)
+        self.setMinimumWidth(460)
         self._worker = None
 
         self.provider_combo = QComboBox()
@@ -26,7 +26,9 @@ class SettingsDialog(QDialog):
         self.model_name_edit.setPlaceholderText("مثال: gemini-2.0-flash")
 
         self.test_btn = QPushButton("اختبار الاتصال")
+        self.test_btn.setProperty("flat", "true")
         self.test_status = QLabel("")
+        self.test_status.setProperty("secondary", "true")
         self.test_btn.clicked.connect(self._test_connection)
 
         self.whisper_combo = QComboBox()
@@ -45,12 +47,15 @@ class SettingsDialog(QDialog):
 
         self.output_dir_edit = QLineEdit(db.get_setting("output_dir", ""))
         browse_btn = QPushButton("استعراض...")
+        browse_btn.setProperty("flat", "true")
         browse_btn.clicked.connect(self._browse_output_dir)
         out_row = QHBoxLayout()
+        out_row.setSpacing(8)
         out_row.addWidget(self.output_dir_edit)
         out_row.addWidget(browse_btn)
 
         form = QFormLayout()
+        form.setSpacing(10)
         form.addRow("مزود الذكاء الاصطناعي:", self.provider_combo)
         form.addRow("API Key:", self.api_key_edit)
         form.addRow("اسم النموذج:", self.model_name_edit)
@@ -64,10 +69,15 @@ class SettingsDialog(QDialog):
         form.addRow("مجلد الإخراج:", out_row)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        buttons.button(QDialogButtonBox.Save).setText("حفظ")
+        buttons.button(QDialogButtonBox.Cancel).setText("إلغاء")
+        buttons.button(QDialogButtonBox.Cancel).setProperty("flat", "true")
         buttons.accepted.connect(self._save)
         buttons.rejected.connect(self.reject)
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(14)
         layout.addLayout(form)
         layout.addWidget(buttons)
 

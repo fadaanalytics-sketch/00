@@ -6,13 +6,14 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QListWidget, QListWidgetItem, QSplitter, QTabWidget,
     QVBoxLayout, QHBoxLayout, QPushButton, QLabel, QProgressBar, QPlainTextEdit,
-    QTableWidget, QTableWidgetItem, QComboBox, QMessageBox, QCheckBox,
+    QTableWidget, QTableWidgetItem, QComboBox, QCheckBox,
     QFileDialog, QAbstractItemView
 )
 
 from .. import config, db
 from ..models import Project, Topic
 from .. import video_sources, transcription, analysis, exporter, ai_providers
+from . import msgbox
 from .new_project_dialog import NewProjectDialog
 from .settings_dialog import SettingsDialog
 from .template_editor import TemplatesManagerDialog
@@ -56,14 +57,29 @@ class MainWindow(QMainWindow):
 
     def _build_central(self):
         splitter = QSplitter()
+        splitter.setContentsMargins(12, 12, 12, 12)
+        splitter.setHandleWidth(12)
 
         self.project_list = QListWidget()
         self.project_list.currentRowChanged.connect(self.on_project_selected)
+
+        new_project_btn = QPushButton("＋  مشروع جديد")
+        new_project_btn.clicked.connect(self.on_new_project)
+
         left = QWidget()
         left_l = QVBoxLayout(left)
-        left_l.addWidget(QLabel("المشاريع"))
-        left_l.addWidget(self.project_list)
-        left.setMaximumWidth(280)
+        left_l.setContentsMargins(0, 0, 0, 0)
+        left_l.setSpacing(10)
+        projects_title = QLabel("المشاريع")
+        title_font = projects_title.font()
+        title_font.setBold(True)
+        title_font.setPointSize(title_font.pointSize() + 2)
+        projects_title.setFont(title_font)
+        left_l.addWidget(projects_title)
+        left_l.addWidget(self.project_list, 1)
+        left_l.addWidget(new_project_btn)
+        left.setMinimumWidth(220)
+        left.setMaximumWidth(300)
 
         self.tabs = QTabWidget()
         self.tabs.addTab(self._build_transcribe_tab(), "الفيديو والتفريغ الصوتي")
@@ -78,52 +94,71 @@ class MainWindow(QMainWindow):
     def _build_transcribe_tab(self):
         w = QWidget()
         layout = QVBoxLayout(w)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
+
         self.project_info_label = QLabel("لا يوجد مشروع محدد")
+        bold = self.project_info_label.font()
+        bold.setBold(True)
+        bold.setPointSize(bold.pointSize() + 1)
+        self.project_info_label.setFont(bold)
+
         self.whisper_model_label = QLabel("")
+        self.whisper_model_label.setProperty("secondary", "true")
 
         self.language_combo = QComboBox()
         for code, label in transcription.LANGUAGES.items():
             self.language_combo.addItem(label, code)
 
-        self.transcribe_btn = QPushButton("بدء التفريغ الصوتي")
+        self.transcribe_btn = QPushButton("▶  بدء التفريغ الصوتي")
         self.transcribe_btn.clicked.connect(self.start_transcription)
         self.transcribe_cancel_btn = QPushButton("إلغاء")
+        self.transcribe_cancel_btn.setProperty("danger", "true")
         self.transcribe_cancel_btn.setEnabled(False)
         self.transcribe_cancel_btn.clicked.connect(lambda: self._cancel_worker())
         self.transcribe_progress = QProgressBar()
         self.transcribe_progress.setRange(0, 100)
 
         self.export_srt_btn = QPushButton("تصدير SRT")
+        self.export_srt_btn.setProperty("flat", "true")
         self.export_srt_btn.clicked.connect(self._export_srt)
 
         self.transcript_view = QPlainTextEdit()
         self.transcript_view.setReadOnly(True)
+        self.transcript_view.setPlaceholderText("سيظهر النص المفرغ هنا بعد التفريغ الصوتي...")
 
         layout.addWidget(self.project_info_label)
         layout.addWidget(self.whisper_model_label)
         lang_row = QHBoxLayout()
         lang_row.addWidget(QLabel("لغة الفيديو:"))
         lang_row.addWidget(self.language_combo)
+        lang_row.addStretch()
         layout.addLayout(lang_row)
         row = QHBoxLayout()
+        row.setSpacing(8)
         row.addWidget(self.transcribe_btn)
         row.addWidget(self.transcribe_cancel_btn)
-        row.addWidget(self.transcribe_progress)
+        row.addWidget(self.transcribe_progress, 1)
         row.addWidget(self.export_srt_btn)
         layout.addLayout(row)
-        layout.addWidget(QLabel("النص المفرغ:"))
+        transcript_label = QLabel("النص المفرغ:")
+        transcript_label.setProperty("secondary", "true")
+        layout.addWidget(transcript_label)
         layout.addWidget(self.transcript_view, 1)
         return w
 
     def _build_analysis_tab(self):
         w = QWidget()
         layout = QVBoxLayout(w)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
 
         top_row = QHBoxLayout()
+        top_row.setSpacing(8)
         self.mode_combo = QComboBox()
         for key, label in config.ANALYSIS_MODES.items():
             self.mode_combo.addItem(label, key)
-        self.analyze_btn = QPushButton("تحليل بالذكاء الاصطناعي")
+        self.analyze_btn = QPushButton("✨  تحليل بالذكاء الاصطناعي")
         self.analyze_btn.clicked.connect(self.start_analysis)
         self.analysis_progress = QProgressBar()
         self.analysis_progress.setRange(0, 0)
@@ -131,7 +166,7 @@ class MainWindow(QMainWindow):
         top_row.addWidget(QLabel("نمط التحليل:"))
         top_row.addWidget(self.mode_combo)
         top_row.addWidget(self.analyze_btn)
-        top_row.addWidget(self.analysis_progress)
+        top_row.addWidget(self.analysis_progress, 1)
         layout.addLayout(top_row)
 
         self.results_table = QTableWidget(0, 5)
@@ -139,6 +174,10 @@ class MainWindow(QMainWindow):
             ["تصدير؟", "اسم الموضوع", "النص", "البداية", "النهاية"]
         )
         self.results_table.horizontalHeader().setStretchLastSection(True)
+        self.results_table.verticalHeader().setVisible(False)
+        self.results_table.setAlternatingRowColors(True)
+        self.results_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.results_table.verticalHeader().setDefaultSectionSize(34)
         self.results_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         layout.addWidget(self.results_table, 1)
         return w
@@ -146,37 +185,48 @@ class MainWindow(QMainWindow):
     def _build_export_tab(self):
         w = QWidget()
         layout = QVBoxLayout(w)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(10)
 
         row = QHBoxLayout()
+        row.setSpacing(8)
         self.template_combo = QComboBox()
         self.template_combo.addItem("بدون قالب", None)
         row.addWidget(QLabel("القالب:"))
-        row.addWidget(self.template_combo)
+        row.addWidget(self.template_combo, 1)
 
-        self.output_dir_edit = QPushButton("اختيار مجلد الإخراج")
+        self.output_dir_edit = QPushButton("📁  اختيار مجلد الإخراج")
+        self.output_dir_edit.setProperty("flat", "true")
         self.output_dir_edit.clicked.connect(self._pick_output_dir)
         self._export_dir = db.get_setting("output_dir", "")
         row.addWidget(self.output_dir_edit)
         layout.addLayout(row)
 
         self.output_dir_label = QLabel(self._export_dir or "(لم يتم اختيار مجلد بعد)")
+        self.output_dir_label.setProperty("secondary", "true")
         layout.addWidget(self.output_dir_label)
 
         export_row = QHBoxLayout()
-        self.export_btn = QPushButton("تصدير المقاطع المحددة")
+        export_row.setSpacing(8)
+        self.export_btn = QPushButton("⬇  تصدير المقاطع المحددة")
         self.export_btn.clicked.connect(self.start_export)
         self.export_cancel_btn = QPushButton("إلغاء")
+        self.export_cancel_btn.setProperty("danger", "true")
         self.export_cancel_btn.setEnabled(False)
         self.export_cancel_btn.clicked.connect(lambda: self._cancel_worker())
         self.export_progress = QProgressBar()
         self.export_progress.setRange(0, 100)
         export_row.addWidget(self.export_btn)
         export_row.addWidget(self.export_cancel_btn)
-        export_row.addWidget(self.export_progress)
+        export_row.addWidget(self.export_progress, 1)
         layout.addLayout(export_row)
 
+        log_label = QLabel("سجل التصدير:")
+        log_label.setProperty("secondary", "true")
+        layout.addWidget(log_label)
         self.export_log = QPlainTextEdit()
         self.export_log.setReadOnly(True)
+        self.export_log.setPlaceholderText("ستظهر هنا مسارات الملفات المصدَّرة...")
         layout.addWidget(self.export_log, 1)
         return w
 
@@ -250,20 +300,18 @@ class MainWindow(QMainWindow):
         db.update_project(project)
         self._set_busy(False)
         self.refresh_project_list()
-        QMessageBox.information(self, "تم", "تم استيراد الفيديو بنجاح")
+        msgbox.info(self, "تم", "تم استيراد الفيديو بنجاح")
 
     def _on_import_failed(self, project: Project, msg: str):
         self._set_busy(False)
         db.delete_project(project.id)
-        QMessageBox.critical(self, "خطأ", f"فشل استيراد الفيديو:\n{msg}")
+        msgbox.error(self, "خطأ", f"فشل استيراد الفيديو:\n{msg}")
         self.refresh_project_list()
 
     def on_delete_project(self):
         if not self.current_project:
             return
-        if QMessageBox.question(
-            self, "تأكيد", f"حذف المشروع '{self.current_project.name}'؟"
-        ) != QMessageBox.Yes:
+        if not msgbox.confirm(self, "تأكيد", f"حذف المشروع '{self.current_project.name}'؟"):
             return
         db.delete_project(self.current_project.id)
         self.current_project = None
@@ -273,7 +321,7 @@ class MainWindow(QMainWindow):
 
     def start_transcription(self):
         if not self.current_project or not self.current_project.video_path:
-            QMessageBox.warning(self, "تنبيه", "اختر مشروعًا يحتوي على فيديو أولاً")
+            msgbox.warn(self, "تنبيه", "اختر مشروعًا يحتوي على فيديو أولاً")
             return
         self._set_busy(True, "جارٍ التفريغ الصوتي...")
         self.transcribe_progress.setValue(0)
@@ -305,11 +353,11 @@ class MainWindow(QMainWindow):
         self._set_busy(False)
         self._refresh_transcribe_tab()
         self.refresh_project_list()
-        QMessageBox.information(self, "تم", "اكتمل التفريغ الصوتي")
+        msgbox.info(self, "تم", "اكتمل التفريغ الصوتي")
 
     def _export_srt(self):
         if not self.current_segments:
-            QMessageBox.warning(self, "تنبيه", "لا يوجد نص مفرغ بعد")
+            msgbox.warn(self, "تنبيه", "لا يوجد نص مفرغ بعد")
             return
         default_name = f"{self.current_project.name}.srt" if self.current_project else "transcript.srt"
         path, _ = QFileDialog.getSaveFileName(self, "حفظ ملف SRT", default_name, "SubRip (*.srt)")
@@ -317,19 +365,19 @@ class MainWindow(QMainWindow):
             return
         with open(path, "w", encoding="utf-8") as f:
             f.write(transcription.segments_to_srt(self.current_segments))
-        QMessageBox.information(self, "تم", "تم حفظ ملف SRT بنجاح")
+        msgbox.info(self, "تم", "تم حفظ ملف SRT بنجاح")
 
     # ---------------- analysis ----------------
 
     def start_analysis(self):
         if not self.current_segments:
-            QMessageBox.warning(self, "تنبيه", "قم بالتفريغ الصوتي أولاً")
+            msgbox.warn(self, "تنبيه", "قم بالتفريغ الصوتي أولاً")
             return
         api_key = db.get_setting("api_key", "")
         provider_name = db.get_setting("ai_provider", "gemini")
         model_name = db.get_setting("ai_model", "")
         if not api_key:
-            QMessageBox.warning(self, "تنبيه", "أدخل مفتاح API من الإعدادات أولاً")
+            msgbox.warn(self, "تنبيه", "أدخل مفتاح API من الإعدادات أولاً")
             return
         provider = ai_providers.get_provider(provider_name, api_key, model_name)
         mode = self.mode_combo.currentData()
@@ -392,7 +440,7 @@ class MainWindow(QMainWindow):
             return
         selected = [t for t in self.current_topics if t.selected]
         if not selected:
-            QMessageBox.warning(self, "تنبيه", "لم يتم تحديد أي مقاطع للتصدير")
+            msgbox.warn(self, "تنبيه", "لم يتم تحديد أي مقاطع للتصدير")
             return
         out_dir = self._export_dir or os.path.join(
             config.PROJECTS_DIR, str(self.current_project.id), "exports"
@@ -418,7 +466,7 @@ class MainWindow(QMainWindow):
         db.update_project(self.current_project)
         self.export_log.setPlainText("\n".join(out_paths))
         self.refresh_project_list()
-        QMessageBox.information(self, "تم", f"تم تصدير {len(out_paths)} مقطع بنجاح")
+        msgbox.info(self, "تم", f"تم تصدير {len(out_paths)} مقطع بنجاح")
         self._open_folder(os.path.dirname(out_paths[0]) if out_paths else "")
 
     def _open_folder(self, path):
@@ -463,4 +511,4 @@ class MainWindow(QMainWindow):
         if msg == config.CANCELLED_MESSAGE:
             self.statusBar().showMessage("تم إلغاء العملية")
             return
-        QMessageBox.critical(self, "خطأ", msg)
+        msgbox.error(self, "خطأ", msg)

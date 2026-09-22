@@ -20,10 +20,12 @@ class NewProjectDialog(QDialog):
 
         self.file_edit = QLineEdit()
         browse_btn = QPushButton("استعراض...")
+        browse_btn.setProperty("flat", "true")
         browse_btn.clicked.connect(self._browse_file)
         file_row = QWidget()
         file_row_l = QHBoxLayout(file_row)
         file_row_l.setContentsMargins(0, 0, 0, 0)
+        file_row_l.setSpacing(8)
         file_row_l.addWidget(self.file_edit)
         file_row_l.addWidget(browse_btn)
 
@@ -42,16 +44,22 @@ class NewProjectDialog(QDialog):
         )
 
         form = QFormLayout()
+        form.setSpacing(10)
         form.addRow("اسم المشروع:", self.name_edit)
         form.addRow("مصدر الفيديو:", self.source_combo)
         form.addRow("", self.stack)
         form.addRow("نموذج Whisper:", self.whisper_combo)
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.button(QDialogButtonBox.Ok).setText("إنشاء")
+        buttons.button(QDialogButtonBox.Cancel).setText("إلغاء")
+        buttons.button(QDialogButtonBox.Cancel).setProperty("flat", "true")
         buttons.accepted.connect(self._accept)
         buttons.rejected.connect(self.reject)
 
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(14)
         layout.addLayout(form)
         layout.addWidget(buttons)
 

@@ -6,6 +6,7 @@ from PySide6.QtWidgets import QApplication
 from . import config, db
 from .logging_setup import setup_logging
 from .ui.main_window import MainWindow
+from .ui.theme import apply_theme
 
 
 def main():
@@ -14,6 +15,7 @@ def main():
     db.get_conn()
     app = QApplication(sys.argv)
     app.setLayoutDirection(Qt.RightToLeft)
+    apply_theme(app)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
