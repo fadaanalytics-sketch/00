@@ -1,8 +1,6 @@
 """Build AI prompts from the transcript and parse the response into Topics."""
-import json
-import re
-
 from .ai_providers import BaseProvider, AIProviderError
+from .json_utils import JsonExtractionError, extract_json_array
 from .models import Segment, Topic
 from .transcription import transcript_as_text
 
@@ -41,23 +39,14 @@ def build_prompt(mode: str, segments: list[Segment]) -> str:
     return PROMPTS[mode].format(transcript=transcript)
 
 
-def _extract_json_array(text: str) -> list:
-    fenced = re.search(r"```(?:json)?\s*(\[.*?\])\s*```", text, re.DOTALL)
-    candidate = fenced.group(1) if fenced else text
-    match = re.search(r"\[.*\]", candidate, re.DOTALL)
-    if not match:
-        raise AnalysisError("لم يتم العثور على JSON صالح في رد الذكاء الاصطناعي")
-    return json.loads(match.group(0))
-
-
 def analyze(provider: BaseProvider, mode: str, segments: list[Segment],
             project_id: int) -> list[Topic]:
     prompt = build_prompt(mode, segments)
+    raw = provider.generate(prompt)
     try:
-        raw = provider.generate(prompt)
-    except AIProviderError:
-        raise
-    items = _extract_json_array(raw)
+        items = extract_json_array(raw)
+    except JsonExtractionError as e:
+        raise AnalysisError(str(e)) from e
 
     topics = []
     for idx, item in enumerate(items):

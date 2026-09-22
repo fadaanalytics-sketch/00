@@ -22,7 +22,7 @@ class AIProviderError(Exception):
     pass
 
 
-def _post_with_retry(url: str, **kwargs) -> requests.Response:
+def post_with_retry(url: str, **kwargs) -> requests.Response:
     """POST with exponential backoff on network errors, 429, and 5xx responses."""
     last_error = None
     for attempt in range(1, MAX_ATTEMPTS + 1):
@@ -62,7 +62,7 @@ class GeminiProvider(BaseProvider):
 
     def generate(self, prompt: str) -> str:
         url = f"{GEMINI_BASE}/models/{self.model}:generateContent"
-        resp = _post_with_retry(
+        resp = post_with_retry(
             url,
             params={"key": self.api_key},
             json={"contents": [{"parts": [{"text": prompt}]}]},
@@ -82,7 +82,7 @@ class OpenRouterProvider(BaseProvider):
         self.model = model or DEFAULT_OPENROUTER_MODEL
 
     def generate(self, prompt: str) -> str:
-        resp = _post_with_retry(
+        resp = post_with_retry(
             f"{OPENROUTER_BASE}/chat/completions",
             headers={"Authorization": f"Bearer {self.api_key}"},
             json={

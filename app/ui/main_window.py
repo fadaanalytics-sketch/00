@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
 
 from .. import config, db
 from ..models import Project, Topic
-from .. import video_sources, transcription, analysis, exporter, ai_providers
+from .. import video_sources, transcription, transcription_gemini, analysis, exporter, ai_providers
 from . import msgbox
 from .new_project_dialog import NewProjectDialog
 from .settings_dialog import SettingsDialog
@@ -323,21 +323,37 @@ class MainWindow(QMainWindow):
         if not self.current_project or not self.current_project.video_path:
             msgbox.warn(self, "تنبيه", "اختر مشروعًا يحتوي على فيديو أولاً")
             return
+        language = self.language_combo.currentData()
+        engine = db.get_setting("transcription_engine", config.DEFAULT_TRANSCRIPTION_ENGINE)
+        extra_kwargs = {"language": language}
+
+        if engine == "gemini":
+            api_key = db.get_setting("api_key", "")
+            provider_name = db.get_setting("ai_provider", "gemini")
+            if provider_name != "gemini" or not api_key:
+                msgbox.warn(
+                    self, "تنبيه",
+                    "التفريغ السحابي عبر Gemini يحتاج اختيار Gemini كمزود الذكاء "
+                    "الاصطناعي وإدخال مفتاح API له من الإعدادات أولاً.",
+                )
+                return
+            model = db.get_setting("ai_model", "") or transcription_gemini.DEFAULT_MODEL
+            worker_fn = transcription_gemini.transcribe_via_gemini
+            worker_args = (self.current_project.video_path, api_key, model)
+        else:
+            extra_kwargs["device"] = db.get_setting("whisper_device", "auto")
+            extra_kwargs["compute_type"] = db.get_setting("whisper_compute_type", "default")
+            worker_fn = transcription.transcribe
+            worker_args = (self.current_project.video_path, self.current_project.whisper_model)
+
         self._set_busy(True, "جارٍ التفريغ الصوتي...")
         self.transcribe_progress.setValue(0)
-        device = db.get_setting("whisper_device", "auto")
-        compute_type = db.get_setting("whisper_compute_type", "default")
-        language = self.language_combo.currentData()
         self._worker = WorkerThread(
-            transcription.transcribe,
-            self.current_project.video_path,
-            self.current_project.whisper_model,
-            device=device,
-            compute_type=compute_type,
-            language=language,
+            worker_fn, *worker_args,
             report_progress=True,
             report_status=True,
             cancellable=True,
+            **extra_kwargs,
         )
         self._worker.progress.connect(lambda v: self.transcribe_progress.setValue(int(v * 100)))
         self._worker.status.connect(lambda msg: self.statusBar().showMessage(msg))

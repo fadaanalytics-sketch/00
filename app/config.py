@@ -22,6 +22,12 @@ DEFAULT_WHISPER_MODEL = "small"
 WHISPER_DEVICES = ["auto", "cpu", "cuda"]
 WHISPER_COMPUTE_TYPES = ["default", "int8", "int8_float16", "float16", "float32"]
 
+TRANSCRIPTION_ENGINES = {
+    "local": "محلي (Faster-Whisper) - يعمل بدون إنترنت لكن يحتاج معالجة على جهازك",
+    "gemini": "سحابي (Gemini) - أسرع على الأجهزة الضعيفة، يحتاج إنترنت ومفتاح Gemini",
+}
+DEFAULT_TRANSCRIPTION_ENGINE = "local"
+
 AI_PROVIDERS = ["gemini", "openrouter"]
 
 ANALYSIS_MODES = {

@@ -12,7 +12,7 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("الإعدادات")
-        self.setMinimumWidth(460)
+        self.setMinimumWidth(560)
         self._worker = None
 
         self.provider_combo = QComboBox()
@@ -30,6 +30,14 @@ class SettingsDialog(QDialog):
         self.test_status = QLabel("")
         self.test_status.setProperty("secondary", "true")
         self.test_btn.clicked.connect(self._test_connection)
+
+        self.engine_combo = QComboBox()
+        for key, label in config.TRANSCRIPTION_ENGINES.items():
+            self.engine_combo.addItem(label, key)
+        current_engine = db.get_setting("transcription_engine", config.DEFAULT_TRANSCRIPTION_ENGINE)
+        idx = self.engine_combo.findData(current_engine)
+        if idx >= 0:
+            self.engine_combo.setCurrentIndex(idx)
 
         self.whisper_combo = QComboBox()
         self.whisper_combo.addItems(config.WHISPER_MODELS)
@@ -63,6 +71,7 @@ class SettingsDialog(QDialog):
         test_row.addWidget(self.test_btn)
         test_row.addWidget(self.test_status)
         form.addRow("", test_row)
+        form.addRow("محرك التفريغ الصوتي:", self.engine_combo)
         form.addRow("نموذج Whisper الافتراضي:", self.whisper_combo)
         form.addRow("جهاز المعالجة (Whisper):", self.device_combo)
         form.addRow("نوع الحساب (Whisper):", self.compute_type_combo)
@@ -108,6 +117,7 @@ class SettingsDialog(QDialog):
         db.set_setting("ai_provider", self.provider_combo.currentText())
         db.set_setting("api_key", self.api_key_edit.text())
         db.set_setting("ai_model", self.model_name_edit.text())
+        db.set_setting("transcription_engine", self.engine_combo.currentData())
         db.set_setting("whisper_model", self.whisper_combo.currentText())
         db.set_setting("whisper_device", self.device_combo.currentText())
         db.set_setting("whisper_compute_type", self.compute_type_combo.currentText())
