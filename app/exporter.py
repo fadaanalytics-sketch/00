@@ -27,7 +27,11 @@ class CancelledError(ExportError):
 def _ffmpeg_bin() -> str:
     path = shutil.which("ffmpeg")
     if not path:
-        raise ExportError("FFmpeg غير مثبت أو غير موجود في PATH")
+        raise ExportError(
+            "FFmpeg غير مثبت أو غير موجود في PATH. لو ثبّته للتو، تأكد من إغلاق "
+            "التطبيق تمامًا وإعادة فتحه (أو إعادة تشغيل الجهاز) - البرنامج يقرأ "
+            "متغير PATH وقت فتحه فقط، فتعديله لا يؤثر على نسخة مفتوحة بالفعل."
+        )
     return path
 
 
