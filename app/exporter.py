@@ -99,10 +99,20 @@ def safe_filename(name: str) -> str:
     return keep.strip().strip(".") or "clip"
 
 
+def _even(n: int) -> int:
+    """libx264 (yuv420p) requires even width/height. Round up rather than down
+    so we never crop off a row/column of real content for an odd source size."""
+    return n if n % 2 == 0 else n + 1
+
+
 def build_cut_cmd(ffmpeg: str, video_path: str, start: float, end: float, out_path: str) -> list[str]:
     duration = max(end - start, 0.1)
     return [
         ffmpeg, "-y", "-ss", str(start), "-i", video_path, "-t", str(duration),
+        # Guards against source videos with an odd width/height (e.g. some
+        # screen recordings), which would otherwise fail the same way a
+        # template with an odd-sized canvas does (see build_template_cmd).
+        "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2",
         *HIGH_QUALITY_VIDEO_ARGS, *HIGH_QUALITY_AUDIO_ARGS, out_path,
     ]
 
@@ -110,9 +120,15 @@ def build_cut_cmd(ffmpeg: str, video_path: str, start: float, end: float, out_pa
 def build_template_cmd(ffmpeg: str, video_path: str, start: float, end: float,
                         template: Template, out_path: str) -> list[str]:
     duration = max(end - start, 0.1)
+    # The final encoded frame is the canvas size (the video is only overlaid onto
+    # it), so an odd canvas_w/canvas_h - e.g. a 941px-wide uploaded template image -
+    # makes libx264 fail outright with "width not divisible by 2". Round both
+    # canvas and video-placement dimensions up to even to guarantee this can't happen.
+    canvas_w, canvas_h = _even(template.canvas_w), _even(template.canvas_h)
+    video_w, video_h = _even(template.video_w), _even(template.video_h)
     filters = [
-        f"[1:v]scale={template.canvas_w}:{template.canvas_h}[bg]",
-        f"[0:v]scale={template.video_w}:{template.video_h}[fg]",
+        f"[1:v]scale={canvas_w}:{canvas_h}[bg]",
+        f"[0:v]scale={video_w}:{video_h}[fg]",
         f"[bg][fg]overlay={template.video_x}:{template.video_y}[stage0]",
     ]
     last = "stage0"
