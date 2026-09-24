@@ -47,9 +47,19 @@ DRIVE_FOLDER = "AIVideoAnalyzer"  #@param {type:"string"}
 PORT = 8000  #@param {type:"integer"}"""
 
 INSTALL_CELL = """#@title 📦 تثبيت المكتبات (حوالي دقيقة في أول كل جلسة)
-import subprocess, sys
-subprocess.run([sys.executable, "-m", "pip", "install", "-q",
-                "faster-whisper>=1.1", "fastapi>=0.110", "uvicorn>=0.29"], check=True)
+import importlib, subprocess, sys
+r = subprocess.run([sys.executable, "-m", "pip", "install",
+                    "faster-whisper>=1.1", "fastapi>=0.110", "uvicorn>=0.29"],
+                   stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+if r.returncode != 0:
+    print(r.stdout[-6000:])
+    raise RuntimeError("تثبيت المكتبات فشل — ابعت الكلام اللي فوق")
+importlib.invalidate_caches()
+import fastapi, uvicorn  # the server can't start without these
+try:
+    import faster_whisper
+except Exception as e:  # not fatal: transcription falls back to Gemini
+    print("⚠ faster-whisper مش شغالة، التفريغ هيتم بـ Gemini:", e)
 print("✓ تم تثبيت المكتبات")"""
 
 EXTRACT_CELL_TEMPLATE = '''#@title 🧩 تجهيز ملفات التطبيق
@@ -70,7 +80,23 @@ from google.colab import drive, output, userdata
 APP_DIR = "/content/ava_app"
 LOG_PATH = "/content/ava_server.log"
 PID_PATH = "/content/ava_server.pid"
-drive.mount("/content/drive")
+# Defaults in case the settings cell wasn't run (e.g. only this cell after a restart).
+DRIVE_FOLDER = globals().get("DRIVE_FOLDER", "AIVideoAnalyzer")
+PORT = int(globals().get("PORT", 8000))
+
+if not os.path.exists(os.path.join(APP_DIR, "ava", "server.py")):
+    raise RuntimeError("ملفات التطبيق مش موجودة — شغّل النوت بوك من الأول: Runtime ← Run all")
+try:
+    import fastapi, uvicorn
+except ImportError:
+    raise RuntimeError("المكتبات مش متثبتة — شغّل خلية «📦 تثبيت المكتبات» الأول") from None
+try:
+    drive.mount("/content/drive")
+except Exception as e:
+    raise RuntimeError("ماقدرناش نوصل لجوجل درايف — شغّل الخلية دي تاني، واختار حسابك ووافق على "
+                       "كل الصلاحيات في النافذة اللي بتظهر (لو النافذة ماظهرتش، اسمح بالـ pop-ups)") from e
+if not os.path.isdir("/content/drive/MyDrive"):
+    raise RuntimeError("جوجل درايف متوصل بس فولدر MyDrive مش ظاهر — Runtime ← Disconnect and delete runtime وشغّل من الأول")
 
 def secret(name):
     try:
@@ -133,8 +159,35 @@ try:
 except TypeError:  # older google.colab without anchor_text
     output.serve_kernel_port_as_window(PORT)"""
 
-LOG_CELL = """#@title 📜 سجل السيرفر (لو حصلت مشكلة، شغّل الخلية دي وابعت اللي يظهر)
-print(open("/content/ava_server.log", encoding="utf-8", errors="replace").read()[-8000:])"""
+LOG_CELL = """#@title 🩺 تشخيص المشاكل (لو حصلت مشكلة، شغّل الخلية دي وابعت اللي يظهر)
+import importlib.util, os, shutil, sys, traceback
+
+def row(ok, text):
+    print(("✓ " if ok else "✗ ") + text)
+
+print("===== آخر خطأ في النوت بوك =====")
+err = getattr(sys, "last_exc", None) or getattr(sys, "last_value", None)
+print("".join(traceback.format_exception(type(err), err, err.__traceback__))[-4000:] if err else "مفيش")
+
+print("===== الخطوات =====")
+row(shutil.which("nvidia-smi") is not None, "كارت الشاشة (GPU)")
+for mod in ("fastapi", "uvicorn", "faster_whisper"):
+    row(importlib.util.find_spec(mod) is not None, "مكتبة " + mod)
+row(os.path.exists("/content/ava_app/ava/server.py"), "ملفات التطبيق")
+row(os.path.isdir("/content/drive/MyDrive"), "جوجل درايف متوصل")
+alive = False
+try:
+    pid = int(open("/content/ava_server.pid").read().strip())
+    alive = b"ava.server:app" in open(f"/proc/{pid}/cmdline", "rb").read()
+except (OSError, ValueError):
+    pass
+row(alive, "السيرفر شغال")
+
+print("===== سجل السيرفر =====")
+if os.path.exists("/content/ava_server.log"):
+    print(open("/content/ava_server.log", encoding="utf-8", errors="replace").read()[-8000:] or "(فاضي)")
+else:
+    print("السيرفر ما اتشغلش خالص — المشكلة في خلية قبل «🚀 تشغيل التطبيق» (أول خلية فيها علامة حمرا)")"""
 
 
 def package_zip_b64() -> str:

@@ -57,3 +57,20 @@ def test_code_cells_compile_and_gpu_is_requested():
     run = next("".join(c["source"]) for c in code if "serve_kernel_port_as_window" in "".join(c["source"]))
     assert 'userdata.get(name)' in run and "PID_PATH" in run
     json.dumps(nb)  # serialisable
+
+
+def test_diagnostics_cell_reports_last_error_without_a_server(capsys, monkeypatch):
+    """The diagnostics cell must work even when nothing started (no log, no pid file)."""
+    import sys
+
+    builder = load_builder()
+    try:
+        raise RuntimeError("drive mount failed")
+    except RuntimeError as e:
+        monkeypatch.setattr(sys, "last_exc", e, raising=False)
+        monkeypatch.setattr(sys, "last_value", e, raising=False)
+    monkeypatch.setattr(os.path, "exists", lambda p: False)
+    exec(compile(builder.LOG_CELL, "cell", "exec"), {})
+    out = capsys.readouterr().out
+    assert "drive mount failed" in out
+    assert "السيرفر ما اتشغلش خالص" in out
