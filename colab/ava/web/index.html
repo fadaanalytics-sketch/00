@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Video Analyzer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233B6DF0'/%3E%3Cpath d='M12 9l12 7-12 7z' fill='white'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700;800&family=Amiri:wght@400;700&family=Cairo:wght@400;600;700;800;900&family=Noto+Kufi+Arabic:wght@400;700;900&family=Readex+Pro:wght@400;700&family=Tajawal:wght@400;700;900&display=swap">
+  <link rel="stylesheet" href="static/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-mark">▶</span> AI Video Analyzer</div>
+    <div class="chips" id="status-chips"></div>
+    <nav class="topnav">
+      <button class="btn ghost" id="nav-projects">🎬 المشاريع</button>
+      <button class="btn ghost" id="nav-templates">🖼 القوالب</button>
+      <button class="btn ghost" id="nav-settings">⚙ الإعدادات</button>
+    </nav>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar card">
+      <div class="sidebar-head">
+        <h2>المشاريع</h2>
+        <button class="btn primary sm" id="btn-new-project">+ مشروع جديد</button>
+      </div>
+      <ul class="project-list" id="project-list"></ul>
+    </aside>
+    <main id="main"><div class="loading">جارٍ التحميل...</div></main>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+  <script type="module" src="static/app.js"></script>
+</body>
+</html>

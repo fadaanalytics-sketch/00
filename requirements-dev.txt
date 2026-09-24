@@ -1,3 +1,7 @@
 -r requirements.txt
 pytest>=8.0
 pyinstaller>=6.6
+# Colab edition (tests/colab, colab/run_local.py)
+fastapi>=0.110
+uvicorn>=0.29
+httpx>=0.27
