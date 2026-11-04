@@ -1,5 +1,15 @@
 # استخراج نصوص بلوكات البوت (BotStar / taswikabot)
 
+## ✅ الطريقة الأسهل (موصى بها): `extract-from-canvas.js`
+بيقرأ البلوكات من الكانفاس مباشرة (`sab-message` / `.message-name` / `.element-content`)، حتى البلوكات اللي عليها "Hide Preview".
+افتح Bot Builder ← `F12` ← Console ← الصق الملف ← Enter ← هينزل `bot-texts.txt` و `bot-texts.json`.
+
+> ملاحظة: المحرر بيعرض أسماء الأزرار مقصوصة على 20 حرف (زي `Cara mengetahui stat`)، فده اللي هيطلع. الاسم الكامل بيظهر بس في لوحة الخصائص لما تدوس على الزر.
+
+---
+
+## الطريقة التانية: `extract-bot-texts.js` (تلقيط بيانات الـ Network)
+
 السكربت `extract-bot-texts.js` بيشتغل من Console المتصفح وانت فاتح محرر البوت، ويطلّع كل النصوص اللي جوة البلوكات (رسائل، أزرار، Quick Replies، كروت...) في ملف `.txt` مرتب باسم كل بلوك.
 
 ## الخطوات
