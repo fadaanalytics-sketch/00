@@ -1,0 +1,78 @@
+{
+  "labels": {
+    "Profil Akademi": "Nagu Saabsan",
+    "Cara Mendaftar": "Is-diiwaangelinta",
+    "Hubungi Kami": "Nala Soo Xiriir",
+    "Cara Belajar": "Sida Wax Loo Barto",
+    "Cara Ujian": "Nidaamka Imtixaanka",
+    "Cara mengunduh serti": "Soo Dejinta Shahaado",
+    "Sertifikat Akademi": "Shahaadooyinka",
+    "Kurikulum Pembelajar": "Manhajka Waxbarasho",
+    "Masuk untuk Siswa Te": "Soo Galidda Ardayda",
+    "Lupa Kata Sandi": "Ilowday Erayga Sirta",
+    "Cara mengetahui stat": "Ma La I Aqbalay?",
+    "Ku Saabsan Akadeemiy": "Nagu Saabsan",
+    "Sida Loo Isdiiwaange": "Is-diiwaangelinta",
+    "Nala Soo Xiriir": "Nala Soo Xiriir",
+    "App-ka Akadeemiyada": "App-ka Akadeemiyada"
+  },
+  "blocks": {
+    "Menu Utama": {
+      "name": "Menu Utama",
+      "cardTitle": "Ku soo dhawoow Akadeemiyada Rushd.",
+      "cardSubtitle": "Fadlan dooro adeegga aad u baahan tahay adigoo gujinaya badhamada hoose."
+    },
+    "Komentar": {
+      "name": "Komentar",
+      "text": "Ku soo dhawoow Akadeemiyada Rushd, {first_name} ✨\n\nWaxaan dhammaan faahfaahinta kuugu soo dirnay Messenger-ka. Waxaan diyaar u nahay inaan halkaas kuugu adeegno, kana jawaabno dhammaan su'aalahaaga. 🤍\n\nAkadeemiyada Rushd waa madal waxbarasho oo loogu talagalay in ardayda Soomaaliyeed lagu baro culuumta shareecada Islaamka, iyadoo loo marayo barnaamijyo iyo koorsooyin si nidaamsan loo diyaariyey, oo ay ardaydu si fudud u fahmi karaan.\n\nAkadeemiyadu waxay ardayda siisaa fursad ay ku kororsadaan cilmiga diinta, kuna bartaan caqiidada, tawxiidka iyo fiqiga, si ay diintooda si sax ah u fahmaan, ugana dhaqmaan cilmi iyo garasho sugan.\n\nMar walba waxaan ku faraxsanahay inaan kuu adeegno. 💫\n\nWaxaan kugu sugaynaa Messenger-ka si aan uga jawaabno dhammaan su'aalahaaga. ✨"
+    },
+    "Cara Belajar": {
+      "name": "Sida Wax Loo Barto",
+      "text": "Sida wax loo barto ee Akadeemiyada Rushd:\n\n🗓️ Waxbarashadu waxay bilaabanaysaa 30-ka Agoosto.\n💥 Waxbarashadu waxay kuu bilaabanaysaa isla marka aad dhammaystirto is-diiwaangelinta.\n🔗 https://Akademibina.com/register\n🔸 Gal bogga barnaamijyada ama dibloomayaasha, kadibna dooro barnaamijka aad rabto inaad barato iyo maaddada aad ka bilaabayso.\n🔗 https://Akademibina.com/diplomas\n🔸 Casharrada waxaad ku baranaysaa muuqaallo waxbarasho iyo qoraallo cilmiyeed.\n🔸 Kadib waxaad galaysaa imtixaanka, waxaadna isla markiiba soo dejisan kartaa shahaadada marka aad ku guulaysato."
+    },
+    "Cara Ujian": {
+      "name": "Nidaamka Imtixaanka",
+      "text": "📝 Nidaamka imtixaanka:\n\n🔸 Imtixaanka gal kadib markaad daawato casharka oo aad eegto tixraacyada (ugu yaraan 80% maaddada).\n🔸 Badhanka \"Imtixaan Hadda\" wuxuu ku yaal cashar kasta.\n🔸 Cashar kasta 2 fursadood ayaad leedahay; dhibcaha ugu sarreeya ayaa la qaadanayaa.\n🔸 Isku dayada u dhexeysii 120 daqiiqo oo dib-u-akhris ah.\n🔸 Furitaanka imtixaanka waa isku day, xitaa haddii la xiro.\n🔸 Dhammee ka hor inta waqtigu dhammaan, haddii kale wuu xirmayaa.\n🔸 Natiijada ka eeg \"Koorsooyinkayga iyo Shahaadooyinkayga\".\n🔸 Haddii aad 2 jeer ku dhacdo, waad sii wadi kartaa; fursad 3aad ayaad helaysaa dhammaadka (ugu badnaan 3 cashar)."
+    },
+    "Cara mengunduh sertifikat": {
+      "name": "Soo Dejinta Shahaadada",
+      "text": "📌 Sida loo soo dejiyo shahaadada koorsada:\n\n⭐️ Kadib markaad gasho akoonkaaga ee bogga Akadeemiyada Rushd, dooro \"Koorsooyinkayga iyo Shahaadooyinkayga\".\n⭐️ Dooro dibloomada aad rabto inaad aragto natiijadeeda iyo shahaadadeeda.\n⭐️ Guji \"Natiijooyinka iyo Shahaadooyinka\".\n⭐️ Dooro koorsada aad rabto shahaadadeeda.\n⭐️ Guji \"Soo Deji Shahaadada\".\n⭐️ Qiimaynta koorsada ayaa soo baxaysa; dooro heerka aad ku qanacsan tahay, kadib guji \"Waan Oggolahay\".\n⭐️ Shahaadadu waxay ku soo baxaysaa laba qaab: sawir iyo PDF — dooro midka kuu habboon oo soo deji.\n\n🔗 https://akademibina.com/kursus-saya_sertifikat-saya"
+    },
+    "Masuk untuk Siswa Terdaftar": {
+      "name": "Soo Galidda Ardayda",
+      "text": "🔑 Sida ay u soo galaan ardayda horey isugu diiwaangeliyey Akadeemiyada Rushd:\n1️⃣ Fur bogga soo galidda adigoo isticmaalaya xiriirkan:\nhttps://Akademibina.com/login\n2️⃣ Geli iimaylka aad isku diiwaangelisay.\n3️⃣ Geli erayga sirta ah ee aad hore u samaysay.\n4️⃣ Daar doorashada \"I xasuuso\" si nidaamku u kaydiyo xogtaada soo galidda.\n5️⃣ Guji badhanka \"Gal\" si aad akoonkaaga u gasho."
+    },
+    "Lupa Kata Sandi": {
+      "name": "Ilowday Erayga Sirta",
+      "text": "Haddii aad ilowday erayga sirta ah, fadlan raac tallaabooyinkan:\n1️⃣ Bogga soo galidda ku guji \"Ma ilowday erayga sirta?\": https://Akademibina.com/login\n2️⃣ Nidaamku wuxuu iimaylkaaga kuugu soo dirayaa farriin aad ku bedeli karto erayga sirta ah.\n📨 Hubi in iimaylka aad gelisay uu sax yahay, oo eeg sanduuqa farriimaha (Inbox) ama galka Spam-ka.\nHaddii farriintu ku soo gaari weydo, fadlan la xiriir kooxda taageerada ee Telegram:\nhttps://t.me/+cY4F6kcjfBQ5MWQ0"
+    },
+    "Sertifikat Akademi": {
+      "name": "Shahaadooyinka",
+      "text": "📜 Shahaadooyinka Akadeemiyada Rushd:\n\n✅ Shahaadada dhammaystirka koorsada\n✅ Shahaadada dhammaystirka dibloomada\n✅ Shahaadada dhammaystirka simistarka\n✅ Shahaadada qalinjebinta\n✅ Kashfiga dhibcaha ardayga (Transcript)\n\n👈 Faahfaahinta shahaadooyinka ka eeg halkan:\nhttps://akademibina.com/info/sertifikat\n✍️ Hadda isdiiwaangeli:\nhttps://akademibina.com/register\n\n🔹 Si aad u barato akadeemiyada iyo barnaamijyada dibloomada:\nhttps://akademibina.com/silsilah"
+    },
+    "Profil Akademi": {
+      "name": "Nagu Saabsan",
+      "text": "Akadeemiyada Rushd waa madal waxbarasho oo online ah, loogu talagalay in bulshada Soomaaliyeed lagu baro culuumta shareecada Islaamka, iyadoo la raacayo manhajka Ahlus-Sunnah wal-Jamaacah.\n\nWaxay bixisaa koorsooyin diini ah oo si fudud oo nidaamsan loo diyaariyey, gaar ahaan caqiidada, tawxiidka iyo cibaadada, si ardaygu u helo cilmi sugan oo uu nolol maalmeedkiisa ku dabaqi karo.\n\nCasharrada waxaa la socda imtixaanno lagu qiimeeyo fahamka ardayga.\n\nArdayda si guul leh u dhammaystirta barnaamijyada waxay helaan shahaado rasmi ah. 🎓"
+    },
+    "Cara Mendaftar": {
+      "name": "Is-diiwaangelinta",
+      "text": "✨ Tallaabooyinka is-diiwaangelinta ardayda cusub ee Akadeemiyada Rushd:\n\nFadlan gal bogga is-diiwaangelinta:\nhttps://Akademibina.com/register\n\nWaxaad isku diiwaangelin kartaa:\n🔹 Akoonka Google\n🔹 Akoonka Facebook\n📧 Ama iimaylkaaga\n\nFoomka samaynta akoonka waxaa lagaa codsanayaa xogtan:\n🧑‍🎓 ▪️ Magacaaga oo buuxa sida aad rabto inuu shahaadada ugu qornaado\n📨 ▪️ Iimayl shaqaynaya\n🔒 ▪️ Erayga sirta ah\n🔑 ▪️ Xaqiijinta erayga sirta ah\n\nMarkaad si sax ah u buuxiso xogta oo dhan, guji badhanka \"Hadda Isdiiwaangeli\" ✅"
+    },
+    "Cara mengetahui status diterima?": {
+      "name": "Ma La I Aqbalay?",
+      "text": "Sideen ku ogaan karaa in la i diiwaangeliyey oo la i aqbalay?\n\nMarka is-diiwaangelintu guulaysato, waxaad bogga ka helaysaa farriin soo dhaweyn ah, magacaaguna wuxuu ka soo muuqanayaa xagga sare ee bogga akoonkaaga Akadeemiyada.\n\n💬 Su'aalo ama caawimaad, fadlan la xiriir Taageerada Farsamada:\nhttps://t.me/+cY4F6kcjfBQ5MWQ0"
+    },
+    "Aplikasi Akademi Bina Al-Muslim": {
+      "name": "App-ka Akadeemiyada",
+      "text": "Ma rabtaa inaad casharrada u hesho si fudud oo habaysan? 📲✨\n\nApp-ka Akadeemiyada Rushd wuxuu hal meel isugu keenaa casharradaada, qorshahaaga iyo horumarkaaga, si aad u hesho waxbarasho raaxo leh.\n\nHaddii aad horey isugu diiwaangelisay bogga, kaliya ku gal iimaylkaaga — uma baahnid akoon cusub!\n\nWaxaa laga heli karaa Android — hadda soo deji oo si kalsooni leh u bilow safarkaaga cilmi-doonka! 🌟✨\nhttps://play.google.com/store/apps/details?id=com.fadaamedia.akademibina"
+    },
+    "Kurikulum Pembelajaran": {
+      "name": "Manhajka Waxbarashada",
+      "text": "📚 Manhajka Waxbarashada – Akadeemiyada Rushd\n\nManhaj dhammaystiran oo ka kooban afar simistar:\n1️⃣ Dhisidda Aasaaska iyo Aqoonsiga\n2️⃣ Dhisidda Aqoonta iyo Ittibaaca\n3️⃣ Qoto-dheeraynta iyo Xoojinta Cilmiga\n4️⃣ Adkaysiga Nafta iyo Xaqiiqada Nolosha\n\nWaxaan kaa caawinaynaa inaad dareen diineed u beddesho cibaado ku dhisan cilmi iyo baseero, si aad u hesho farxadda adduunka iyo aakhirada.\n\nCasharrada waxaa loo soo bandhigaa si kooban, waxaana isla markiiba la socda imtixaan elektaroonig ah oo lagu cabbiro fahamkaaga.\n\n📘 Barnaamijyada: https://akademibina.com/silsilah\n📮 Caawinaad: https://t.me/+cY4F6kcjfBQ5MWQ0"
+    },
+    "Hubungi Kami": {
+      "name": "Nala Soo Xiriir",
+      "text": "📩 Ma qabtaa su'aal mise caawimaad ayaad u baahan tahay?\nWaxaan diyaar u nahay inaan kuu adeegno si farxad leh.\nKooxda Akadeemiyada Rushd waxay diyaar u tahay inay ka jawaabto su'aalahaaga oo dhan, kuna siiso taageerada aad u baahan tahay, iyadoo loo marayo:\n📞 Taageerada farsamada (Telegram): https://t.me/+cY4F6kcjfBQ5MWQ0\n📱 WhatsApp: +62 853-3760-4664\n📧 Iimayl: akademibina08@gmail.com\n💬 Farriin toos ah oo aad noogu soo dirto boggaga rasmiga ah ee baraha bulshada.\n🌐 Bogga rasmiga ah: https://akademibina.com/id\n🕐 Waqtiga jawaabta: maalin kasta."
+    }
+  }
+}
